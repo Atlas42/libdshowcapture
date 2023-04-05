@@ -19,7 +19,6 @@
 
 #include <stdlib.h>
 #include <mutex>
-#include <iostream>
 #include "dshow-enum.hpp"
 #include "dshow-formats.hpp"
 #include "log.hpp"
