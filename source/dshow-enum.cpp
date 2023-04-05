@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <mutex>
+#include <iostream>
 #include "dshow-enum.hpp"
 #include "dshow-formats.hpp"
 #include "log.hpp"
@@ -325,49 +326,12 @@ static bool ClosestAudioMTCallback(ClosestAudioData &data,
 	    data.config.format != info.format)
 		return true;
 
-	int sampleRateVal = 0;
-	int channelsVal = 0;
-
-	if (data.config.sampleRate < info.minSampleRate)
-		sampleRateVal = info.minSampleRate - data.config.sampleRate;
-	else if (data.config.sampleRate > info.maxSampleRate)
-		sampleRateVal = data.config.sampleRate - info.maxSampleRate;
-	else if (data.config.sampleRate == info.minSampleRate)
-		sampleRateVal = data.config.sampleRate;
-	else if (data.config.sampleRate == info.maxSampleRate)
-		sampleRateVal = data.config.sampleRate;
-
-	if (data.config.channels < info.minChannels)
-		channelsVal = info.minChannels - data.config.channels;
-	else if (data.config.channels == info.minChannels)
-		channelsVal = info.minChannels;
-	else if (info.maxChannels > data.config.channels)
-		channelsVal = data.config.channels - info.maxChannels;
-	else if (data.config.channels == info.maxChannels)
-		channelsVal = data.config.channels;
-
+	int sampleRateVal = ::abs(data.config.sampleRate - int(wfex->nSamplesPerSec));
+	int channelsVal = ::abs(data.config.channels - int(wfex->nChannels));
 	int totalVal = sampleRateVal + channelsVal;
 
 	if (!data.found || data.bestVal > totalVal) {
-		if (channelsVal == 0) {
-			LONG channels = data.config.channels;
-			ClampToGranularity(channels, info.minChannels,
-					   info.channelsGranularity);
-			wfex->nChannels = (WORD)channels;
-
-			wfex->nBlockAlign =
-				wfex->wBitsPerSample * wfex->nChannels / 8;
-		}
-
-		if (sampleRateVal == 0) {
-			wfex->nSamplesPerSec = data.config.sampleRate;
-			ClampToGranularity((LONG &)wfex->nSamplesPerSec,
-					   info.minSampleRate,
-					   info.sampleRateGranularity);
-		}
-
-		wfex->nAvgBytesPerSec =
-			wfex->nSamplesPerSec * wfex->nBlockAlign;
+		wfex->nAvgBytesPerSec = wfex->nSamplesPerSec * wfex->nBlockAlign;
 
 		data.mt = copiedMT;
 		data.found = true;
